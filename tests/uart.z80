@@ -1,16 +1,34 @@
 ;;; Testing simple UART operations
+	LD	SP, 0x8400	; 1k stack
 
-	LD HL, 0xFFFF
-	;; Delays for ~360ms
+Main:	LD 	HL, 0xFFFF	; Delay for ~360ms
+	CALL	Delay
+	CALL	UART_Init
+Loop:	
+	LD	A, 'A'
+	CALL	UART_WriteChar
+	LD	A, 'd'
+	CALL	UART_WriteChar
+	LD	A, 'a'
+	CALL	UART_WriteChar
+	LD	A, 'n'
+	CALL	UART_WriteChar
+	LD	A, '\r'
+	CALL	UART_WriteChar
+	LD	A, '\n'
+	CALL	UART_WriteChar
+	JP 	Loop
+	
 Delay:	
 	NOP
 	NOP
-	DEC L
-	JP NZ, Delay
-	DEC H
-	JP NZ, Delay
+	DEC 	L
+	JP 	NZ, Delay
+	DEC 	H
+	JP 	NZ, Delay
+	RET
 	
-Init_RS232:
+UART_Init:
 	IN 	A, (0x03)	; Enable access to divisor registers
 	SET 	7, A
 	OUT 	(0x03), A	
@@ -21,22 +39,20 @@ Init_RS232:
 	OUT	(0x00), A
 
 	LD	A, %00000011	; 8N1, reset divisor latch
-	OUT 	(0x03), A	
+	OUT 	(0x03), A
+	RET
 
-Write_Chars:
-	LD	A, 0x41		; Write 'A' to UART
+UART_WriteChar:
+	PUSH	BC
+	LD	B, A
+UART_WriteChar_CheckReady:
+	IN	A, (0x05)
+	BIT	5, A
+	LD	HL, 0x5555
+	CALL	Delay
+;;; 	JP 	NZ, UART_WriteChar_CheckReady
+	LD	A, B
 	OUT	(0x00), A
-	
-	LD HL, 0x5555		; Delays for ~120ms	
-Delay2:	
-	NOP
-	NOP
-	DEC L
-	JP NZ, Delay2
-	DEC H
-	JP NZ, Delay2
-	
-	JP Write_Chars		; Keep writing 'A' forever
+	POP	BC
+	RET
 
-	
-	
