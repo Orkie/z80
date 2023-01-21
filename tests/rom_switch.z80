@@ -5,7 +5,9 @@ Main:	LD 	HL, 0xFFFF	; Delay for ~360ms
 	CALL	Delay
 	LD	A, 0x00
 	OUT	(0x80), A
-
+Loop:	
+	JP	Loop
+	
 Delay:	
 	NOP
 	NOP
@@ -14,3 +16,4 @@ Delay:
 	DEC 	H
 	JP 	NZ, Delay
 	RET
+	
