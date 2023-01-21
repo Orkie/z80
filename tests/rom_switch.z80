@@ -1,0 +1,16 @@
+;;; Testing switching out ROM for RAM
+	LD	SP, 0x8400	; 1k stack
+
+Main:	LD 	HL, 0xFFFF	; Delay for ~360ms
+	CALL	Delay
+	LD	A, 0x00
+	OUT	(0x80), A
+
+Delay:	
+	NOP
+	NOP
+	DEC 	L
+	JP 	NZ, Delay
+	DEC 	H
+	JP 	NZ, Delay
+	RET

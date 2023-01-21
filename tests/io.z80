@@ -1,0 +1,43 @@
+;;; Testing we can both read and write IO ports
+	LD	SP, 0x8400	; 1k stack
+	
+Main:
+	LD	HL, 0x5555
+	CALL	Delay
+
+	LD	A, %01011010
+	OUT	(0x07), A
+
+	LD	HL, 0x5555
+	CALL	Delay
+
+	LD	A, 0x0
+	IN	A, (0x07)
+
+	LD	HL, 0x5555
+	CALL	Delay
+
+	CP	%01011010
+	JP	Z, Correct
+	JP	Incorrect
+	
+Correct:
+	LD	A, %11110000
+	OUT 	(0x7F), A
+	JP	Correct
+	
+Incorrect:
+	LD	A, %00001111
+	OUT 	(0x7F), A
+	JP 	Incorrect
+
+Delay:	
+	NOP
+	NOP
+	DEC 	L
+	JP 	NZ, Delay
+	DEC 	H
+	JP 	NZ, Delay
+	RET
+
+	

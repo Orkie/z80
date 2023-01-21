@@ -40,6 +40,13 @@ UART_Init:
 
 	LD	A, %00000011	; 8N1, reset divisor latch
 	OUT 	(0x03), A
+
+	LD	A, %00000111	; Enable FIFO
+	OUT 	(0x02), A
+
+	LD	A, %00000000	; Disable interrupts
+	OUT 	(0x01), A
+	
 	RET
 
 UART_WriteChar:
@@ -48,9 +55,7 @@ UART_WriteChar:
 UART_WriteChar_CheckReady:
 	IN	A, (0x05)
 	BIT	5, A
-	LD	HL, 0x5555
-	CALL	Delay
-;;; 	JP 	NZ, UART_WriteChar_CheckReady
+ 	JP 	Z, UART_WriteChar_CheckReady
 	LD	A, B
 	OUT	(0x00), A
 	POP	BC
