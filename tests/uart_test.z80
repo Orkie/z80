@@ -1,0 +1,24 @@
+;;; Testing simple UART operations
+	LD	SP, 0x8400	; 1k stack
+
+Main:	LD 	HL, 0xFFFF	; Delay for ~360ms
+	CALL	Delay
+	CALL	UART_Init
+Loop:	
+	LD	A, 'A'
+	CALL	UART_WriteChar
+	LD	A, 'd'
+	CALL	UART_WriteChar
+	LD	A, 'a'
+	CALL	UART_WriteChar
+	LD	A, 'n'
+	CALL	UART_WriteChar
+	LD	A, '\r'
+	CALL	UART_WriteChar
+	LD	A, '\n'
+	CALL	UART_WriteChar
+	JP 	Loop
+	
+	include "misc.z80"
+	include "uart.z80"
+	

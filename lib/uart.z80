@@ -1,33 +1,6 @@
-;;; Testing simple UART operations
-	LD	SP, 0x8400	; 1k stack
+;;; Controls the UART at 0x00
 
-Main:	LD 	HL, 0xFFFF	; Delay for ~360ms
-	CALL	Delay
-	CALL	UART_Init
-Loop:	
-	LD	A, 'A'
-	CALL	UART_WriteChar
-	LD	A, 'd'
-	CALL	UART_WriteChar
-	LD	A, 'a'
-	CALL	UART_WriteChar
-	LD	A, 'n'
-	CALL	UART_WriteChar
-	LD	A, '\r'
-	CALL	UART_WriteChar
-	LD	A, '\n'
-	CALL	UART_WriteChar
-	JP 	Loop
-	
-Delay:	
-	NOP
-	NOP
-	DEC 	L
-	JP 	NZ, Delay
-	DEC 	H
-	JP 	NZ, Delay
-	RET
-	
+;;; Initialise UART, 9600 8N1
 UART_Init:
 	IN 	A, (0x03)	; Enable access to divisor registers
 	SET 	7, A
@@ -49,6 +22,8 @@ UART_Init:
 	
 	RET
 
+;;; Writes a single character to UART
+;;; A - the character you wish to write
 UART_WriteChar:
 	PUSH	BC
 	LD	B, A
@@ -61,3 +36,16 @@ UART_WriteChar_CheckReady:
 	POP	BC
 	RET
 
+;;; Writes a null-terminate string to UART
+;;; HL - the address of the string
+UART_WriteString:
+	PUSH 	AF
+	LD	A, (HL)
+	CP	A, 0x0		; If we have hit \0, we're done
+	JP	Z, UART_WriteString_Done
+	CALL	UART_WriteChar
+	INC	HL
+UART_WriteString_Done:	
+	POP 	AF
+	RET
+	

@@ -1,0 +1,35 @@
+;;; Monitor program, stored in ROM
+	JP 	Main
+
+;;; Strings
+S_Intro:	db	"Z80 Monitor by Adan Scotney\r\n",0
+S_Prompt:	db	"> ",0
+	
+Main:
+	LD	SP, 0x8400	; 1k stack
+	LD 	HL, 0x071A	; 10ms initial delay to allow hardware to settle
+	CALL	Delay
+	CALL 	UART_Init
+	LD	HL, S_Intro
+	CALL	UART_WriteString
+
+Prompt:	
+	LD	HL, S_Prompt
+	CALL	UART_WriteString
+	LD	HL, V_Input
+;;;  TODO UART_ReadString into V_Line, max length
+	CALL	Parse_Input
+	JP 	Prompt		; Stay in the prompt forever
+
+Parse_Input:
+	RET
+
+;;; Libraries
+	include "misc.z80"
+	include "uart.z80"
+
+;;; Variables
+	org 0x8402
+
+V_Input:	ds	32
+

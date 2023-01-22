@@ -1,0 +1,13 @@
+;;; Misc useful subroutines
+
+;;; Delay for some period of time
+;;; HL - length of delay, in units of ~5.5uS
+Delay:	
+	NOP
+	NOP
+	DEC 	L
+	JP 	NZ, Delay
+	DEC 	H
+	JP 	NZ, Delay
+	RET
+
