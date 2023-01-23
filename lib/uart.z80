@@ -1,8 +1,15 @@
 ;;; Controls the UART at 0x00
 
+UART_THR:	equ 0x00
+UART_RHR:	equ 0x00
+UART_IER:	equ 0x01
+UART_FCR:	equ 0x02
+UART_LCR:	equ 0x03
+UART_LSR:	equ 0x05
+	
 ;;; Initialise UART, 9600 8N1
 UART_Init:
-	IN 	A, (0x03)	; Enable access to divisor registers
+	IN 	A, (UART_LCR)	; Enable access to divisor registers
 	SET 	7, A
 	OUT 	(0x03), A	
 
@@ -12,13 +19,13 @@ UART_Init:
 	OUT	(0x00), A
 
 	LD	A, %00000011	; 8N1, reset divisor latch
-	OUT 	(0x03), A
+	OUT 	(UART_LCR), A
 
 	LD	A, %00000111	; Enable FIFO
-	OUT 	(0x02), A
+	OUT 	(UART_FCR), A
 
 	LD	A, %00000000	; Disable interrupts
-	OUT 	(0x01), A
+	OUT 	(UART_IER), A
 	
 	RET
 
@@ -28,12 +35,37 @@ UART_WriteChar:
 	PUSH	BC
 	LD	B, A
 UART_WriteChar_CheckReady:
-	IN	A, (0x05)
+	IN	A, (UART_LSR)
 	BIT	5, A
  	JP 	Z, UART_WriteChar_CheckReady
 	LD	A, B
 	OUT	(0x00), A
 	POP	BC
+	RET
+
+;;; Reads a single character from UART (blocking)
+;;; A - contains the character which was read
+UART_ReadChar:
+	IN	A, (UART_LSR)
+	BIT	0, A
+	JP	Z, UART_ReadChar
+	IN	A, (UART_RHR)
+	RET
+
+;;; Reads a line from UART (keeps reading until \n is encountered)
+;;; HL - where to store line in memory (must have enough space for number of chars + 1)
+;;; B - maximum number of characters to read
+UART_ReadLine:
+	CALL	UART_ReadChar
+	CP	'\n'
+	JP	Z, UART_ReadLine_Finalise
+	LD	(HL), A
+	INC	HL
+	DEC 	B
+	JP	Z, UART_ReadLine_Finalise
+	JP	UART_ReadLine	
+UART_ReadLine_Finalise:
+	LD 	(HL), 0x00
 	RET
 
 ;;; Writes a null-terminate string to UART

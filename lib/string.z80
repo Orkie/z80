@@ -1,0 +1,55 @@
+;;; String manipulation routines
+
+;;; ============================================================================
+;;; Tests for string equality, Z flag set if they are equal
+;;; HL - address of string 1
+;;; BC - address of string 2
+;;; ============================================================================	
+String_Equal:	
+	LD	A, (BC)
+	CP	(HL)
+	RET	NZ
+	INC	BC
+	INC	HL
+	CP	'\0'
+	RET	Z
+	JP	String_Equal
+
+;;; ============================================================================
+;;; Copies the nth word in a string (words separated by spaces)
+;;; Will stop copying if \0 is encountered in the source.
+;;; HL - source string
+;;; DE - destination
+;;; B - nth word (0-indexed)
+;;; ============================================================================
+String_Word:
+	PUSH	BC
+String_Word_Loop:
+	LD	C, (HL)		; Get the next character from source string
+	INC	HL
+	LD	A, ' '		; If we have read a space, skip to next word
+	CP	C
+	JP	Z, String_Word_NextWord
+	LD	A, 0		; If B != 0, this isn't our word so dont copy it
+	CP	B
+	LD	A, C		
+	JP	NZ, String_Word_SkipCopy
+	LD	(DE), A ; Copy character 
+	INC	DE
+String_Word_SkipCopy:
+	CP	'\0'		; If the character was NULL, we're done
+	JP	Z, String_Word_Return
+	JP	String_Word_Loop ; Otherwise, keep going
+String_Word_NextWord:
+	LD	A, 0
+	CP	B
+	JP	Z, String_Word_Finalise ; If B is 0, we're done
+	DEC	B
+	JP	String_Word_Loop
+String_Word_Finalise:
+	LD	A, 0x00		; Add null termination to destination string
+	LD	(DE), A
+String_Word_Return:	
+	POP	BC
+	RET
+	

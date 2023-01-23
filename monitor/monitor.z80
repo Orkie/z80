@@ -17,7 +17,8 @@ Prompt:
 	LD	HL, S_Prompt
 	CALL	UART_WriteString
 	LD	HL, V_Input
-;;;  TODO UART_ReadString into V_Line, max length
+	LD	B, 32
+	CALL	UART_ReadLine
 	CALL	Parse_Input
 	JP 	Prompt		; Stay in the prompt forever
 
@@ -27,9 +28,10 @@ Parse_Input:
 ;;; Libraries
 	include "misc.z80"
 	include "uart.z80"
+	include "string.z80"
 
 ;;; Variables
-	org 0x8402
+	org 0x8400
 
-V_Input:	ds	32
+V_Input:	ds	33
 
