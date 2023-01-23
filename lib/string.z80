@@ -53,3 +53,39 @@ String_Word_Return:
 	POP	BC
 	RET
 	
+;;; ============================================================================
+;;; Converts a byte to ASCII
+;;; A - byte to convert
+;;; H - first nibble of byte in ASCII (MSB)
+;;; L - first nibble of byte in ASCII (LSB)
+;;; ============================================================================	
+String_ByteToAscii:
+	PUSH	BC
+	LD	B, A
+	CALL	String_NibbleToAscii ; Convert LSB
+	LD	L, A
+	LD	A, B		; Convert MSB
+	SRA	A
+	SRA	A
+	SRA	A
+	SRA	A
+	CALL	String_NibbleToAscii
+	LD	H, A	
+	POP	BC
+	RET
+
+;;; ============================================================================
+;;; Converts a byte to ASCII
+;;; A - nibble to convert
+;;; A - set to ASCII value for nibble
+;;; ============================================================================	
+String_NibbleToAscii:
+	AND	0x0F
+	CP	10
+	JP	C, String_NibbleToAscii_IsNumber
+	ADD 	A, 0x37
+	RET
+String_NibbleToAscii_IsNumber:
+	ADD 	A, 0x30
+	RET
+	

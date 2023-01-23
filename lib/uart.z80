@@ -2,21 +2,25 @@
 
 UART_THR:	equ 0x00
 UART_RHR:	equ 0x00
+UART_DLL:	equ 0x00
 UART_IER:	equ 0x01
+UART_DLM:	equ 0x01
 UART_FCR:	equ 0x02
 UART_LCR:	equ 0x03
 UART_LSR:	equ 0x05
-	
+
+;;; ============================================================================
 ;;; Initialise UART, 9600 8N1
+;;; ============================================================================
 UART_Init:
 	IN 	A, (UART_LCR)	; Enable access to divisor registers
 	SET 	7, A
 	OUT 	(0x03), A	
 
 	LD	A, 0x00		; Set divisor to 12, 9600 baud
-	OUT	(0x01), A
+	OUT	(UART_DLM), A
 	LD	A, 12
-	OUT	(0x00), A
+	OUT	(UART_DLL), A
 
 	LD	A, %00000011	; 8N1, reset divisor latch
 	OUT 	(UART_LCR), A
@@ -28,9 +32,11 @@ UART_Init:
 	OUT 	(UART_IER), A
 	
 	RET
-
+	
+;;; ============================================================================
 ;;; Writes a single character to UART
 ;;; A - the character you wish to write
+;;; ============================================================================
 UART_WriteChar:
 	PUSH	BC
 	LD	B, A
@@ -43,8 +49,10 @@ UART_WriteChar_CheckReady:
 	POP	BC
 	RET
 
+;;; ============================================================================
 ;;; Reads a single character from UART (blocking)
 ;;; A - contains the character which was read
+;;; ============================================================================
 UART_ReadChar:
 	IN	A, (UART_LSR)
 	BIT	0, A
@@ -52,6 +60,7 @@ UART_ReadChar:
 	IN	A, (UART_RHR)
 	RET
 
+;;; ============================================================================
 ;;; Reads a line from UART (keeps reading until \n is encountered)
 ;;; HL - where to store line in memory (must have enough space for number of chars + 1)
 ;;; B - maximum number of characters to read
@@ -67,9 +76,11 @@ UART_ReadLine:
 UART_ReadLine_Finalise:
 	LD 	(HL), 0x00
 	RET
-
+	
+;;; ============================================================================	
 ;;; Writes a null-terminate string to UART
 ;;; HL - the address of the string
+;;; ============================================================================
 UART_WriteString:
 	PUSH 	AF
 	LD	A, (HL)
