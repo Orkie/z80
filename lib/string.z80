@@ -88,4 +88,23 @@ String_NibbleToAscii:
 String_NibbleToAscii_IsNumber:
 	ADD 	A, 0x30
 	RET
+
+;;; ============================================================================
+;;; Upper cases all letters in a string
+;;; HL - address of string to make upper case
+;;; ============================================================================
+String_ToUpper:
+	LD	A, (HL)
+	CP	'\0'		; If we've hit end of string, we're done
+	RET	Z
+	CP	0x61		; If the value is < 'a', no need to do anything
+	JP	C, String_ToUpper_Next
+	CP	0x7B		; If the value >= '{', no need to do anything
+	JP	NC, String_ToUpper_Next
+	SUB	0x20		; Modify character
+	LD	(HL), A
+String_ToUpper_Next:
+	INC	HL
+	JP 	String_ToUpper
+	
 	
