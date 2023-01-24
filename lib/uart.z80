@@ -59,10 +59,11 @@ UART_WriteChar_CheckReady:
 ;;; ============================================================================
 UART_ReadChar:
 	PUSH	BC
-	IN	A, (UART_LSR)
+UART_ReadChar_Loop:
+	IN	A, (UART_LSR)	; Wait for a character to become available in RHR
 	BIT	0, A
-	JP	Z, UART_ReadChar
-	IN	A, (UART_RHR)
+	JP	Z, UART_ReadChar_Loop
+	IN	A, (UART_RHR)	; Read from FIFO
 	LD	B, A
 	IN	A, (UART_SPR)	; Test if echoing is enabled
 	CP	0
@@ -110,13 +111,10 @@ UART_ReadLine_Finalise:
 ;;; HL - the address of the string
 ;;; ============================================================================
 UART_WriteString:
-	PUSH 	AF
 	LD	A, (HL)
-	CP	A, 0x0		; If we have hit \0, we're done
-	JP	Z, UART_WriteString_Done
+	CP	0x0		; If we have hit \0, we're done
+	RET	Z
 	CALL	UART_WriteChar
 	INC	HL
-UART_WriteString_Done:	
-	POP 	AF
-	RET
+	JP 	UART_WriteString
 	
