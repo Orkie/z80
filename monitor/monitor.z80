@@ -36,7 +36,8 @@ Handle_Input:
 	CALL	String_Word
 	LD	HL, V_Word	; Have we been given the command "HELP"?
 	LD	BC, S_Cmd_Help
-	JP	NZ, Handle_Input_Invalid
+	CALL	String_Equal
+	JP	NZ, Handle_Input_Invalid ; No, try the next possibility
 	JP 	Handle_Help
 	RET
 Handle_Input_Invalid:	
