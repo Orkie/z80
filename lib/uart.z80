@@ -8,6 +8,7 @@ UART_DLM:	equ 0x01
 UART_FCR:	equ 0x02
 UART_LCR:	equ 0x03
 UART_LSR:	equ 0x05
+UART_SPR:	equ 0x07
 
 ;;; ============================================================================
 ;;; Initialise UART, 9600 8N1
@@ -30,6 +31,9 @@ UART_Init:
 
 	LD	A, %00000000	; Disable interrupts
 	OUT 	(UART_IER), A
+
+	LD	A, 1
+	OUT	(UART_SPR), A	; Enable read-echoing by default
 	
 	RET
 	
@@ -54,11 +58,34 @@ UART_WriteChar_CheckReady:
 ;;; A - contains the character which was read
 ;;; ============================================================================
 UART_ReadChar:
+	PUSH	BC
 	IN	A, (UART_LSR)
 	BIT	0, A
 	JP	Z, UART_ReadChar
 	IN	A, (UART_RHR)
+	LD	B, A
+	IN	A, (UART_SPR)	; Test if echoing is enabled
+	CP	0
+	JP	Z, UART_ReadChar_Done ; No, just return
+	LD	A, B		      ; Yes, write out the character we just read
+	CALL	UART_WriteChar
+UART_ReadChar_Done:
+	LD	A, B
+	POP	BC
 	RET
+
+;;; ============================================================================
+;;; Controls whether characters read from UART are echo-ed back out
+;;; ============================================================================	
+UART_EnableReadEcho:
+	LD	A, 1
+	OUT	(UART_SPR), A
+	RET
+
+UART_DisableReadEcho:
+	LD	A, 0
+	OUT	(UART_SPR), A
+	RET	
 
 ;;; ============================================================================
 ;;; Reads a line from UART (keeps reading until \n is encountered)
