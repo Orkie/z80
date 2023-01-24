@@ -90,6 +90,54 @@ String_NibbleToAscii_IsNumber:
 	RET
 
 ;;; ============================================================================
+;;; Converts an ASCII hex character to a nibble (any case)
+;;; A - ASCII character to convert
+;;; A - set to the equivalent nibble value
+;;; ============================================================================	
+String_AsciiToNibble:
+	CP	0x30		; Is this >= '0'?
+	RET	C		; Not a valid character
+	CP	0x3A		; Is this a number?
+	JP	NC, String_AsciiToNibble_Test3 ; No
+	SUB	0x30		; It is a number
+	RET
+String_AsciiToNibble_Test3:
+	CP	0x41		; Is this one of the characters between the numbers and letters?
+	RET	C		; Yes, not a valid character
+	CP	0x47		; Is this an upper case A-F?
+	JP	NC, String_AsciiToNibble_Test4 ; No
+	SUB	0x37			       ; Yes
+String_AsciiToNibble_Test4:
+	CP	0x61		; Is this one of the characters between upper and lower case letters?
+	RET	C		; Yes, not a valid character
+	CP	0x67		; Is this a lower case a-f?
+	RET 	NC		; No, not a valid character
+	SUB	0x57
+	RET
+
+;;; ============================================================================
+;;; Converts two ASCII hex characters to a byte
+;;; HL - Address of ASCII characters to convert
+;;; A - Byte equivalent
+;;; ============================================================================		
+String_ToByte:
+	PUSH	BC
+	LD	A, (HL)
+	LD	B, A		; Convert MS nibble, and stash in C for use later
+	CALL	String_AsciiToNibble
+	LD 	C, A
+	INC	HL
+	LD	A, (HL)		; Convert LSN
+	CALL	String_AsciiToNibble
+	SLA	C		; Combine the two
+	SLA	C
+	SLA	C
+	SLA	C
+	OR 	C
+	POP	BC
+	RET
+	
+;;; ============================================================================
 ;;; Upper cases all letters in a string
 ;;; HL - address of string to make upper case
 ;;; ============================================================================
