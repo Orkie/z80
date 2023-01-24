@@ -4,6 +4,9 @@
 ;;; Strings
 S_Intro:	db	"Z80 Monitor by Adan Scotney\r\n",0
 S_Prompt:	db	"> ",0
+S_Cmd_Help:	db	"HELP",0
+S_Help:		db	"Valid commands:\r\n  HELP - Shows this message\r\n",0
+S_InvalidCmd:	db	"Unknown command\r\n",0
 	
 Main:
 	LD	SP, 0x8400	; 1k stack
@@ -14,15 +17,36 @@ Main:
 	CALL	UART_WriteString
 
 Prompt:	
-	LD	HL, S_Prompt
+	LD	HL, S_Prompt	; Write prompt
 	CALL	UART_WriteString
-	LD	HL, V_Input
+	LD	HL, V_Input	; Read a line
 	LD	B, 32
 	CALL	UART_ReadLine
-	CALL	Parse_Input
+	LD	HL, V_Input
+	CALL	String_ToUpper
+	CALL	Handle_Input
 	JP 	Prompt		; Stay in the prompt forever
 
-Parse_Input:
+Handle_Input:
+	LD	HL, V_Input	; Get the command
+	LD	DE, V_Word
+	LD	B, 0
+	CALL	String_Word
+	LD	HL, V_Word	; Have we been given the command "HELP"?
+	LD	BC, S_Cmd_Help
+	JP	NZ, Handle_Input_Invalid
+	JP 	Handle_Help
+	RET
+Handle_Input_Invalid:	
+	LD	HL, S_InvalidCmd
+	CALL 	UART_WriteString
+	RET
+
+Handle_Help:
+	LD	HL, S_Intro
+	CALL	UART_WriteString
+	LD	HL, S_Help
+	CALL	UART_WriteString
 	RET
 
 ;;; Libraries
@@ -34,4 +58,5 @@ Parse_Input:
 	org 0x8400
 
 V_Input:	ds	33
+V_Word:		ds	33
 
