@@ -22,6 +22,8 @@ Prompt:
 	LD	HL, V_Input	; Read a line
 	LD	B, 32
 	CALL	UART_ReadLine
+	LD	A, '\n'
+	CALL	UART_WriteChar
 	LD	HL, V_Input
 	CALL	String_ToUpper
 	CALL	Handle_Input

@@ -59,11 +59,11 @@ UART_WriteChar_CheckReady:
 ;;; ============================================================================
 UART_ReadChar:
 	PUSH	BC
-UART_ReadChar_Loop:
+UART_ReadChar_CheckReady:	
 	IN	A, (UART_LSR)	; Wait for a character to become available in RHR
 	BIT	0, A
-	JP	Z, UART_ReadChar_Loop
-	IN	A, (UART_RHR)	; Read from FIFO
+	JP	Z, UART_ReadChar_CheckReady
+	IN	A, (UART_RHR)	; Read from FIFO	
 	LD	B, A
 	IN	A, (UART_SPR)	; Test if echoing is enabled
 	CP	0
@@ -89,13 +89,13 @@ UART_DisableReadEcho:
 	RET	
 
 ;;; ============================================================================
-;;; Reads a line from UART (keeps reading until \n is encountered)
+;;; Reads a line from UART (keeps reading until \r is encountered)
 ;;; HL - where to store line in memory (must have enough space for number of chars + 1)
 ;;; B - maximum number of characters to read
 ;;; ============================================================================
 UART_ReadLine:
 	CALL	UART_ReadChar
-	CP	'\n'
+	CP	'\r'
 	JP	Z, UART_ReadLine_Finalise
 	LD	(HL), A
 	INC	HL
