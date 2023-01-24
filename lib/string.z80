@@ -120,7 +120,7 @@ String_AsciiToNibble_Test4:
 ;;; HL - Address of ASCII characters to convert
 ;;; A - Byte equivalent
 ;;; ============================================================================		
-String_ToByte:
+String_AsciiToByte:
 	PUSH	BC
 	LD	A, (HL)
 	LD	B, A		; Convert MS nibble, and stash in C for use later
@@ -155,4 +155,18 @@ String_ToUpper_Next:
 	INC	HL
 	JP 	String_ToUpper
 	
+;;; ============================================================================
+;;; Calculates the length of a string, up to but not including, the terminator
+;;; HL - address of string
+;;; B - set to length of string
+;;; ============================================================================
+String_Length:
+	LD	A, '\0'
+	LD	B, -1
+String_Length_Loop:
+	INC	B
+	CP	(HL)
+	INC	HL
+	JP	NZ, String_Length_Loop	
+	RET
 	
