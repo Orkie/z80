@@ -169,4 +169,27 @@ String_Length_Loop:
 	INC	HL
 	JP	NZ, String_Length_Loop	
 	RET
-	
+
+;;; ============================================================================
+;;; Counts the number of words in a string.
+;;; HL - address of string
+;;; B - set to number of words
+;;; ============================================================================
+String_NumWords:
+	LD	A, '\0'
+	LD	B, 0
+	CP	(HL)
+	RET	Z
+	INC	B
+String_NumWords_Loop:
+	CP	(HL)
+	RET	Z
+	LD	A, ' '
+	CP	(HL)
+	JP	NZ, String_NumWords_NextChar
+	INC	B
+String_NumWords_NextChar:
+	INC 	HL
+	LD	A, '\0'
+	JP	String_NumWords_Loop
+
