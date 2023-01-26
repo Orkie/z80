@@ -92,14 +92,14 @@ Handle_Out_Run:
 	LD	DE, V_Word
 	LD	B, 1
 	CALL	String_Word
-	EX	DE, HL
+	LD	HL, V_Word
 	CALL	String_AsciiToByte
 	LD	C, A
 	LD	HL, V_Input	; Get the byte
 	LD	DE, V_Word
 	LD	B, 2
 	CALL	String_Word
-	EX	DE, HL
+	LD	HL, V_Word
 	CALL	String_AsciiToByte
 	OUT	(C), A	
 	RET
@@ -121,7 +121,7 @@ Handle_In_Run:
 	LD	DE, V_Word
 	LD	B, 1
 	CALL	String_Word
-	EX	DE, HL
+	LD	HL, V_Word
 	CALL	String_AsciiToByte
 	LD	C, A
 	IN	A, (C)		; Do it
