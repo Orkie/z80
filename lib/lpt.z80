@@ -1,0 +1,54 @@
+;;; ============================================================================
+;;; Initialise LPT
+;;; ============================================================================
+LPT_Init:
+	PUSH 	HL
+	LD	A, 0x82 	; Mode 0, A - out, B - in, C - out
+	OUT	(LPT_CTL), A
+	LD	A, 0xFF		; All inactive
+	OUT	(LPT_PC), A
+	LD 	HL, 0x071A
+	CALL	Delay
+	LD	A, 0xBB		; Init low
+	OUT	(LPT_PC), A
+	LD 	HL, 0x071A
+	CALL	Delay
+	LD	A, 0xFF		; Init high
+	OUT	(LPT_PC), A
+	LD 	HL, 0x071A
+	CALL	Delay
+	LD	A, 0xDD		; Select printer
+	OUT	(LPT_PC), A
+	LD 	HL, 0x071A
+	CALL	Delay
+	POP	HL
+	RET
+
+;;; ============================================================================
+;;; Waits until LPT is ready to receive data
+;;; ============================================================================
+LPT_WaitReady:
+	IN	A, (LPT_PB)
+	BIT	0, A
+ 	JP 	Z, LPT_WaitReady
+	RET
+
+;;; ============================================================================
+;;; Write a character to LPT
+;;; A - the character you wish to write	
+;;; ============================================================================
+LPT_WriteChar:
+	PUSH	BC
+	LD	B, A
+	CALL	LPT_WaitReady
+	LD	A, B
+	OUT	(LPT_PA), A
+	LD	A, 0xCC
+	OUT	(LPT_PC), A
+	CALL	LPT_WaitReady
+	LD	A, 0xDD
+	OUT	(LPT_PC), A
+	CALL	LPT_WaitReady
+	POP	BC
+	RET
+

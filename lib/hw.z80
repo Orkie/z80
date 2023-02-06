@@ -1,0 +1,17 @@
+;;; UART (16C550) at 0x00
+UART_THR:	equ 0x00
+UART_RHR:	equ 0x00
+UART_DLL:	equ 0x00
+UART_IER:	equ 0x01
+UART_DLM:	equ 0x01
+UART_FCR:	equ 0x02
+UART_LCR:	equ 0x03
+UART_LSR:	equ 0x05
+UART_SPR:	equ 0x07
+
+;;; Printer PIO (82C55) at 0x10
+LPT_PA:		equ 0x10
+LPT_PB:		equ 0x11
+LPT_PC:		equ 0x12
+LPT_CTL:	equ 0x13
+

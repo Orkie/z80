@@ -1,15 +1,3 @@
-;;; Controls the UART at 0x00
-
-UART_THR:	equ 0x00
-UART_RHR:	equ 0x00
-UART_DLL:	equ 0x00
-UART_IER:	equ 0x01
-UART_DLM:	equ 0x01
-UART_FCR:	equ 0x02
-UART_LCR:	equ 0x03
-UART_LSR:	equ 0x05
-UART_SPR:	equ 0x07
-
 ;;; ============================================================================
 ;;; Initialise UART, 9600 8N1
 ;;; ============================================================================

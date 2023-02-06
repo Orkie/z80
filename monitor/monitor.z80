@@ -8,7 +8,9 @@ S_Prompt:	db	"> ",0
 S_Cmd_Help:	db	"HELP",0
 S_Cmd_Out:	db	"OUT",0
 S_Cmd_In:	db	"IN",0
-S_Help:		db	"Valid commands:\r\n  IN [port] - Reads a byte from an IO port\r\n  OUT [port] [value] - Write a byte to an IO port\r\n  HELP - Shows this message\r\n",0
+S_Cmd_PInit:	db	"PINIT",0
+S_Cmd_P:	db	"P",0
+S_Help:		db	"Valid commands:\r\n  IN [port] - Reads a byte from an IO port\r\n  OUT [port] [value] - Write a byte to an IO port\r\n  PINIT - Initialise printer\r\n  P [text]\r\n  HELP - Shows this message\r\n",0
 S_InvalidCmd:	db	"Unknown command (try HELP)\r\n",0
 S_Out_Error:	db	"Expected 2 parameters\r\n",0
 S_In_Error:	db	"Expected 1 parameter\r\n",0
@@ -25,7 +27,7 @@ Prompt:
 	LD	HL, S_Prompt	; Write prompt
 	CALL	UART_WriteString
 	LD	HL, V_Input	; Read a line
-	LD	B, 32
+	LD	B, 80
 	CALL	UART_ReadLine
 	LD	A, '\n'
 	CALL	UART_WriteChar
@@ -34,6 +36,7 @@ Prompt:
 	CALL	Handle_Input
 	JP 	Prompt		; Stay in the prompt forever
 
+;;; TODO - This may be neater as a jump table
 Handle_Input:
 	LD	HL, V_Input	; Get the command
 	LD	DE, V_Word
@@ -57,9 +60,23 @@ Handle_Input_Test_Out:
 	LD	HL, V_Word	; Have we been given the command "OUT"?
 	LD	BC, S_Cmd_Out
 	CALL	String_Equal
-	JP	NZ, Handle_Input_Invalid ; No, try the next possibility
+	JP	NZ, Handle_Input_Test_PInit ; No, try the next possibility
 	JP	Handle_Out
 	RET
+Handle_Input_Test_PInit:
+	LD	HL, V_Word	; Have we been given the command "PINIT"?
+	LD	BC, S_Cmd_PInit
+	CALL	String_Equal
+	JP	NZ, Handle_Input_Test_P ; No, try the next possibility
+	JP	Handle_PInit
+	RET
+Handle_Input_Test_P:
+	LD	HL, V_Word	; Have we been given the command "P"?
+	LD	BC, S_Cmd_P
+	CALL	String_Equal
+	JP	NZ, Handle_Input_Invalid ; No, try the next possibility
+	JP	Handle_P
+	RET		
 Handle_Input_Invalid:
 	LD	HL, S_InvalidCmd
 	CALL 	UART_WriteString
@@ -133,15 +150,47 @@ Handle_In_Run:
 	LD	HL, S_NL
 	CALL	UART_WriteString
 	RET
+
+;;; ============================================================================
+;;; PINIT Initialises a printer
+;;; ============================================================================
+Handle_PInit:
+	CALL	LPT_Init
+	RET
+	
+;;; ============================================================================
+;;; P {text} prints some text
+;;; ============================================================================
+Handle_P:
+	LD	HL, V_Input
+	INC	HL		; Skip space after command if it exists
+	LD	A, (HL)
+	CP	'\0'		; If we've hit end of string, stop
+	JP	Z, Handle_P_Done
+Handle_P_Loop:
+	INC	HL
+	LD	A, (HL)
+	CP	'\0'		; If we've hit end of string, stop
+	JP	Z, Handle_P_Done
+	CALL	LPT_WriteChar	; Otherwise write to printer
+	JP	Handle_P_Loop
+Handle_P_Done:
+	LD	A, 0x0D		; CR
+	CALL	LPT_WriteChar
+	LD	A, 0x0A		; LF
+	CALL	LPT_WriteChar
+	RET
 	
 ;;; Libraries
 	include "misc.z80"
 	include "uart.z80"
 	include "string.z80"
+	include "hw.z80"
+	include "lpt.z80"
 
 ;;; Variables
 	org 0x8400
 
-V_Input:	ds	33
-V_Word:		ds	33
+V_Input:	ds	81
+V_Word:		ds	81
 
