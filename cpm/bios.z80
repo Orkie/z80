@@ -1,31 +1,73 @@
+;;; CP/M BIOS implementation (needs to fit into 1536 bytes)
+
+include "../lib/hw.z80"
+CPM_ROM_LOC:	equ 0x2000
+	
 ;;; ============================================================================
 ;;; Cold boot
 ;;; ============================================================================
 _BOOT:
-	RET
+	JP	_WBOOT_SkipRom
 
 ;;; ============================================================================
-;;; Warm boot
+;;; Warm boot - reloads CP/M from ROM
+;;;   We store the CP/M binary at 0x2000 in ROM, so switch out LO-RAM,
+;;;   calculate difference between CBASE and BOOT labels (i.e. size of CP/M)
+;;;   and copy that many bytes to address starting CBASE. Switch back to LO-RAM
+;;;   after doing this
 ;;; ============================================================================
 _WBOOT:
-	RET
+	XOR	A
+	OUT	(0x80), A	; select lo-rom
+	CCF
+	LD	HL, BOOT
+	LD	DE, CBASE
+	SBC	HL, DE		; size of image
+	LD	B, H
+	LD	C, L
+	LD	HL, CPM_ROM_LOC	; source
+	LD	DE, CBASE	; destination
+	LDIR
+_WBOOT_SkipRom:
+	XOR	A
+	OUT	(0x80), A	; select lo-ram
+	JP	CBASE		; launch CP/M
 
 ;;; ============================================================================
 ;;; Console status
+;;; sets A to 0x00 if no character is ready to be read
+;;; sets A to 0xFF if a character is ready to be read
 ;;; ============================================================================
 _CONST:
+	IN	A, (UART_LSR)
+	BIT	5, A
+ 	JP 	Z, _CONST_NoChar
+	LD	A, 0xFF
+	RET
+_CONST_NoChar:	
+	LD	A, 0x00
 	RET
 
 ;;; ============================================================================
 ;;; Console in
+;;; reads a character and puts it in A (blocking)
 ;;; ============================================================================
 _CONIN:
-	RET
+	IN	A, (UART_LSR)	; Wait for a character to become available in RHR
+	BIT	0, A
+	JP	Z, _CONIN
+	IN	A, (UART_RHR)	; Read from RHR
+	RET	
 
 ;;; ============================================================================
 ;;; Console out
+;;; writes the character in C
 ;;; ============================================================================
 _CONOUT:
+	IN	A, (UART_LSR)
+	BIT	5, A
+ 	JP 	Z, _CONOUT
+	LD	A, C
+	OUT	(UART_THR), A	
 	RET
 
-	

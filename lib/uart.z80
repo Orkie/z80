@@ -37,7 +37,7 @@ UART_WriteChar_CheckReady:
 	BIT	5, A
  	JP 	Z, UART_WriteChar_CheckReady
 	LD	A, B
-	OUT	(0x00), A
+	OUT	(UART_THR), A
 	POP	BC
 	RET
 
