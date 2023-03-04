@@ -68,7 +68,7 @@ _WBOOT_DiskOk:
 ;;; ============================================================================
 _CONST:
 	IN	A, (UART_LSR)
-	BIT	5, A
+	BIT	0, A
  	JP 	Z, _CONST_NoChar
 	LD	A, 0xFF
 	RET
