@@ -10,7 +10,8 @@ S_Cmd_Out:	db	"OUT",0
 S_Cmd_In:	db	"IN",0
 S_Cmd_PInit:	db	"PINIT",0
 S_Cmd_P:	db	"P",0
-S_Help:		db	"Valid commands:\r\n  IN [port] - Reads a byte from an IO port\r\n  OUT [port] [value] - Write a byte to an IO port\r\n  PINIT - Initialise printer\r\n  P [text]\r\n  HELP - Shows this message\r\n",0
+S_Cmd_CPM:	db	"CPM",0
+S_Help:		db	"Valid commands:\r\n  IN [port] - Reads a byte from an IO port\r\n  OUT [port] [value] - Write a byte to an IO port\r\n  PINIT - Initialise printer\r\n  P [text] - Prints [text]\r\n  CPM - Boots CP/M\r\n  HELP - Shows this message\r\n",0
 S_InvalidCmd:	db	"Unknown command (try HELP)\r\n",0
 S_Out_Error:	db	"Expected 2 parameters\r\n",0
 S_In_Error:	db	"Expected 1 parameter\r\n",0
@@ -74,9 +75,16 @@ Handle_Input_Test_P:
 	LD	HL, V_Word	; Have we been given the command "P"?
 	LD	BC, S_Cmd_P
 	CALL	String_Equal
-	JP	NZ, Handle_Input_Invalid ; No, try the next possibility
+	JP	NZ, Handle_Input_Test_CPM ; No, try the next possibility
 	JP	Handle_P
-	RET		
+	RET
+Handle_Input_Test_CPM:
+	LD	HL, V_Word	; Have we been given the command "CPM"?
+	LD	BC, S_Cmd_CPM
+	CALL	String_Equal
+	JP	NZ, Handle_Input_Invalid ; No, try the next possibility
+	JP	Handle_CPM
+	RET			
 Handle_Input_Invalid:
 	LD	HL, S_InvalidCmd
 	CALL 	UART_WriteString
@@ -180,6 +188,19 @@ Handle_P_Done:
 	LD	A, 0x0A		; LF
 	CALL	LPT_WriteChar
 	RET
+
+;;; ============================================================================
+;;; CPM Loads CP/M from ROM and executes it
+;;; ============================================================================
+CPM_ADDR:	equ 0xE400	; Load address for CP/M (CBASE symbol)
+CPM_ENTRY:	equ 0xFA00	; Boot routine in BIOS
+	
+Handle_CPM:
+	LD	BC, 0x1C00	; CP/M occupies 7168 bytes
+	LD	DE, CPM_ADDR	; Destination
+	LD	HL, 0x2000	; Source address of image
+	LDIR
+	JP	CPM_ENTRY
 	
 ;;; Libraries
 	include "misc.z80"
@@ -188,9 +209,14 @@ Handle_P_Done:
 	include "hw.z80"
 	include "lpt.z80"
 
+;;; CP/M image
+	seek 0x2000
+	incbin "../cpm/cpm.bin"
+
 ;;; Variables
 	org 0x8400
-
+	seek 0x8400
+	
 V_Input:	ds	81
 V_Word:		ds	81
 
