@@ -294,6 +294,7 @@ Handle_CFB:
 
 ;;; ============================================================================
 ;;; CFFORMAT Formats the first 8MB of a CF card by setting all bytes to 0xE5
+;;; Takes roughly 3 1/2 minutes
 ;;; ============================================================================	
 Handle_CFFormat:
 	LD	B, 0
@@ -304,9 +305,19 @@ Handle_CFFormat_FillBuffer:	; fill the 512b buffer with 0xE5
 	LD	(HL), 0xE5
 	INC	HL	
 	DJNZ	Handle_CFFormat_FillBuffer
-	LD	HL, V_CF	; write the buffer out to block 0
+	LD	C, 64		; outer loop (end at 64)
+	LD	B, 0		; inner loop (end at 256)
 	LD	DE, 0
+Handle_CFFormat_Loop:
+	LD	HL, V_CF	; write the buffer out to block 0
 	CALL	CF_WriteBlock
+	INC	DE		; next block
+	INC	DE
+	INC	DE
+	INC	DE
+	DJNZ	Handle_CFFormat_Loop
+	DEC	C
+	JP	NZ, Handle_CFFormat_Loop
 	RET
 	
 ;;; Libraries

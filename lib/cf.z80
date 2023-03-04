@@ -70,6 +70,7 @@ CF_ReadSector_Loop:
 ;;; ============================================================================
 CF_WriteBlock:
 	PUSH	BC
+	PUSH	DE
 	CALL	CF_FindBlock
 	LD	A, CF_CMD_WRITE_SECTOR ; set the command
 	OUT	(CF_CMD), A	      ; issue read command
@@ -84,6 +85,7 @@ CF_WriteBlock_Loop:
 	OUT	(CF_DATA), A
 	INC	HL
 	DJNZ	CF_WriteBlock_Loop
+	POP	DE
 	POP	BC
 	RET
 	
