@@ -10,8 +10,12 @@ S_Cmd_Out:	db	"OUT",0
 S_Cmd_In:	db	"IN",0
 S_Cmd_PInit:	db	"PINIT",0
 S_Cmd_P:	db	"P",0
+S_Cmd_CFInit:	db	"CFINIT",0
+S_Cmd_CFRead:	db	"CFREAD",0
+S_Cmd_CFFormat:	db	"CFFORMAT",0
+S_Cmd_CFB:	db	"CFB",0
 S_Cmd_CPM:	db	"CPM",0
-S_Help:		db	"Valid commands:\r\n  IN [port] - Reads a byte from an IO port\r\n  OUT [port] [value] - Write a byte to an IO port\r\n  PINIT - Initialise printer\r\n  P [text] - Prints [text]\r\n  CPM - Boots CP/M\r\n  HELP - Shows this message\r\n",0
+S_Help:		db	"Valid commands:\r\n  IN [port] - Reads a byte from an IO port\r\n  OUT [port] [value] - Write a byte to an IO port\r\n  PINIT - Initialise printer\r\n  P [text] - Prints [text]\r\n  CFINIT - Initialise CompactFlash\r\n  CFREAD [sector] - Reads a 128b sectorinto buffer\r\n  CFB [b] - Shows value of a byte from CF buffer\r\n  CFFORMAT - Writes 0xE5 onto CF card\r\n  CPM - Boots CP/M\r\n  HELP - Shows this message\r\n",0
 S_InvalidCmd:	db	"Unknown command (try HELP)\r\n",0
 S_Out_Error:	db	"Expected 2 parameters\r\n",0
 S_In_Error:	db	"Expected 1 parameter\r\n",0
@@ -82,9 +86,30 @@ Handle_Input_Test_CPM:
 	LD	HL, V_Word	; Have we been given the command "CPM"?
 	LD	BC, S_Cmd_CPM
 	CALL	String_Equal
-	JP	NZ, Handle_Input_Invalid ; No, try the next possibility
+	JP	NZ, Handle_Input_Test_CFInit ; No, try the next possibility
 	JP	Handle_CPM
-	RET			
+	RET
+Handle_Input_Test_CFInit:
+	LD	HL, V_Word	; Have we been given the command "CFInit"?
+	LD	BC, S_Cmd_CFInit
+	CALL	String_Equal
+	JP	NZ, Handle_Input_Test_CFB ; No, try the next possibility
+	JP	Handle_CFInit
+	RET
+Handle_Input_Test_CFB:
+	LD	HL, V_Word	; Have we been given the command "CFB"?
+	LD	BC, S_Cmd_CFB
+	CALL	String_Equal
+	JP	NZ, Handle_Input_Test_CFRead ; No, try the next possibility
+	JP	Handle_CFB
+	RET
+Handle_Input_Test_CFRead:
+	LD	HL, V_Word	; Have we been given the command "CFREAD"?
+	LD	BC, S_Cmd_CFRead
+	CALL	String_Equal
+	JP	NZ, Handle_Input_Invalid ; No, try the next possibility
+	JP	Handle_CFRead
+	RET
 Handle_Input_Invalid:
 	LD	HL, S_InvalidCmd
 	CALL 	UART_WriteString
@@ -201,6 +226,62 @@ Handle_CPM:
 	LD	HL, 0x2000	; Source address of image
 	LDIR
 	JP	CPM_ENTRY
+
+;;; ============================================================================
+;;; CFINIT Initialises the compact flash card
+;;; ============================================================================
+Handle_CFInit:
+	CALL	CF_Init
+	RET
+
+;;; ============================================================================
+;;; CFREAD {128b-sector} reads the block containing a 128b sector
+;;; ============================================================================	
+Handle_CFRead:
+	LD	HL, V_Input
+	CALL	String_NumWords
+	LD	A, 2
+	CP	B
+	JP	Z, Handle_CFRead_Run
+	LD	HL, S_In_Error
+	CALL	UART_WriteString
+	RET
+Handle_CFRead_Run:
+	LD	HL, V_Input	; Get the sector
+	LD	DE, V_Word
+	LD	B, 1
+	CALL	String_Word
+	LD	HL, V_Word
+	CALL	String_AsciiToByte
+	LD	HL, V_CF 	; Set buffer
+	LD	E, A		; Set sector
+	LD	D, 0
+	CALL	CF_ReadSector
+	RET
+
+Handle_CFB:
+	LD	HL, V_Input	; Get the byte
+	LD	DE, V_Word
+	LD	B, 1
+	CALL	String_Word
+	LD	HL, V_Word
+	CALL	String_AsciiToByte
+
+	LD	C, A
+	LD	B, 0
+	LD	HL, V_CF
+	ADD	HL, BC
+	LD	A, (HL)
+	
+	CALL	String_ByteToAscii ; Show the byte we read
+	LD	A, H
+	CALL	UART_WriteChar
+	LD	A, L
+	CALL	UART_WriteChar
+	LD	HL, S_NL
+	CALL	UART_WriteString
+
+	RET
 	
 ;;; Libraries
 	include "misc.z80"
@@ -208,6 +289,7 @@ Handle_CPM:
 	include "string.z80"
 	include "hw.z80"
 	include "lpt.z80"
+	include "cf.z80"
 
 ;;; CP/M image
 	seek 0x2000
@@ -219,4 +301,5 @@ Handle_CPM:
 	
 V_Input:	ds	81
 V_Word:		ds	81
+V_CF:		ds 	512
 

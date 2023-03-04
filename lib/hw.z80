@@ -15,3 +15,19 @@ LPT_PB:		equ 0x11
 LPT_PC:		equ 0x12
 LPT_CTL:	equ 0x13
 
+;;; CF card at 0x08
+CF_DATA:	equ 0x08	;0
+CF_FEATURES:	equ 0x09	;1
+CF_SECCNT:	equ 0x0A	;2
+CF_LBA0:	equ 0x0B	;3
+CF_LBA1:	equ 0x0C	;4
+CF_LBA2:	equ 0x0D	;5
+CF_LBA3:	equ 0x0E	;6
+CF_CMD:		equ 0x0F	;7
+CF_STATUS:	equ 0x0F
+
+CF_CMD_SET_FEATURES:	equ 0xEF
+CF_CMD_READ_SECTOR:	equ 0x20
+CF_CMD_WRITE_SECTOR:	equ 0x30
+
+	

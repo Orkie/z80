@@ -1,0 +1,61 @@
+;;; ============================================================================
+;;; Initialise CF
+;;; ============================================================================
+
+CF_Init:
+	LD	A, 0x01		; 8-bit mode
+	OUT	(CF_FEATURES), A
+	LD	A, 0xE0		; LBA addressing
+	OUT	(CF_LBA3), A
+	LD	A, CF_CMD_SET_FEATURES ; Set up card
+	OUT	(CF_CMD), A
+	LD	A, 0x01		; Handle one sector at a time
+	OUT	(CF_SECCNT), A
+	RET
+
+;;; ============================================================================
+;;; Waits for CF card to become ready to transfer data
+;;; ============================================================================
+CF_WaitReady:
+	IN	A, (CF_STATUS)	; wait for card to no longer be busy
+	AND	%10001000
+	XOR	%00001000
+	JP	NZ, CF_WaitReady
+	RET
+
+;;; ============================================================================
+;;; Reads a 512 block containing the given 128 byte sector from a CF card.
+;;; This is useful because CP/M sectors are 128 bytes long.
+;;; DE - sector number
+;;; HL - destination
+;;; ============================================================================
+CF_ReadSector:
+	PUSH	BC
+	SRL	D		; divide by 4 to get the CF 512b block
+	RR 	E
+	SRL 	D
+	RR 	E
+	LD	A, 0xE0		; upper two LBA address bytes are always the same
+	OUT	(CF_LBA3), A
+	XOR	A
+	OUT	(CF_LBA2), A
+	LD	C, CF_LBA1	; get the LBA block from DE
+	OUT	(C), D
+	LD	C, CF_LBA0
+	OUT	(C), E
+	LD	A, CF_CMD_READ_SECTOR ; set the command
+	OUT	(CF_CMD), A	      ; issue read command
+	LD	B, 0		; inner counter
+CF_ReadSector_Loop:
+	CALL	CF_WaitReady
+	IN	A, (CF_DATA)	; get byte and store
+	LD	(HL), A
+	INC	HL
+	CALL	CF_WaitReady
+	IN	A, (CF_DATA)	; get byte and store
+	LD	(HL), A
+	INC	HL
+	DJNZ	CF_ReadSector_Loop
+	POP	BC
+	RET
+	
