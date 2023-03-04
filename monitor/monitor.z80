@@ -107,8 +107,15 @@ Handle_Input_Test_CFRead:
 	LD	HL, V_Word	; Have we been given the command "CFREAD"?
 	LD	BC, S_Cmd_CFRead
 	CALL	String_Equal
-	JP	NZ, Handle_Input_Invalid ; No, try the next possibility
+	JP	NZ, Handle_Input_Test_CFFormat ; No, try the next possibility
 	JP	Handle_CFRead
+	RET
+Handle_Input_Test_CFFormat:
+	LD	HL, V_Word	; Have we been given the command "CFFORMAT"?
+	LD	BC, S_Cmd_CFFormat
+	CALL	String_Equal
+	JP	NZ, Handle_Input_Invalid ; No, try the next possibility
+	JP	Handle_CFFormat
 	RET
 Handle_Input_Invalid:
 	LD	HL, S_InvalidCmd
@@ -259,6 +266,9 @@ Handle_CFRead_Run:
 	CALL	CF_ReadSector
 	RET
 
+;;; ============================================================================
+;;; CFB {index} displays a byte from the CF buffer
+;;; ============================================================================	
 Handle_CFB:
 	LD	HL, V_Input	; Get the byte
 	LD	DE, V_Word
@@ -280,7 +290,23 @@ Handle_CFB:
 	CALL	UART_WriteChar
 	LD	HL, S_NL
 	CALL	UART_WriteString
+	RET
 
+;;; ============================================================================
+;;; CFFORMAT Formats the first 8MB of a CF card by setting all bytes to 0xE5
+;;; ============================================================================	
+Handle_CFFormat:
+	LD	B, 0
+	LD	HL, V_CF
+Handle_CFFormat_FillBuffer:	; fill the 512b buffer with 0xE5
+	LD	(HL), 0xE5
+	INC	HL
+	LD	(HL), 0xE5
+	INC	HL	
+	DJNZ	Handle_CFFormat_FillBuffer
+	LD	HL, V_CF	; write the buffer out to block 0
+	LD	DE, 0
+	CALL	CF_WriteBlock
 	RET
 	
 ;;; Libraries

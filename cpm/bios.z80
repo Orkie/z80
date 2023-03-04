@@ -1,6 +1,7 @@
 ;;; CP/M BIOS implementation (needs to fit into 1536 bytes)
 
-include "../lib/hw.z80"
+	include "../lib/hw.z80"
+	include "../lib/cf.z80"
 CPM_ROM_LOC:	equ 0x2000
 bdos:	equ	0EC06h		;bdos entry
 cdisk:		equ 0x0004	; address of current disk number 0=a,... l5=p
@@ -107,5 +108,6 @@ CF_DPH:
 	db 	7
 	db	127
 
+;;; Verify in labels.txt that this symbol is not higher than 0xFE00 
 CF_SCRATCH:	 defs 	512
 	
