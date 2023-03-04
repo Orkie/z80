@@ -11,7 +11,7 @@
 ;   Set memory limit here. This is the amount of contigeous
 ; ram starting from 0000. CP/M will reside at the end of this space.
 ;
-MEM:	EQU	64		;for a 62k system (TS802 TEST - WORKS OK).
+MEM:	EQU	63		;for a 62k system (TS802 TEST - WORKS OK).
 ;
 IOBYTE:	EQU	3		;i/o definition byte.
 TDRIVE:	EQU	4		;current drive name and user number.
@@ -3722,15 +3722,15 @@ CONOUT:	JP	_CONOUT
 LIST:	JP	_TODO
 PUNCH:	JP	_TODO
 READER:	JP	_TODO
-HOME:	JP	_TODO
-SELDSK:	JP	_TODO
-SETTRK:	JP	_TODO
-SETSEC:	JP	_TODO
-SETDMA:	JP	_TODO
-READ:	JP	_TODO
-WRITE:	JP	_TODO
+HOME:	JP	_HOME
+SELDSK:	JP	_SELDSK
+SETTRK:	JP	_SETTRK
+SETSEC:	JP	_SETSEC
+SETDMA:	JP	_SETDMA
+READ:	JP	_READ
+WRITE:	JP	_WRITE
 PRSTAT:	JP	_TODO
-SECTRN:	JP	_TODO
+SECTRN:	JP	_SECTRN
 ;
 ;*
 ;******************   E N D   O F   C P / M   *****************

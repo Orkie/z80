@@ -3,9 +3,6 @@
 	include "../lib/hw.z80"
 	include "../lib/cf.z80"
 CPM_ROM_LOC:	equ 0x2000
-bdos:	equ	0EC06h		;bdos entry
-cdisk:		equ 0x0004	; address of current disk number 0=a,... l5=p
-iobyte:		equ 0x0003	; intel i/o byte
 	
 _TODO:
 	RET
@@ -40,8 +37,8 @@ _WBOOT_SkipRom:
 	OUT	(0x80), A	; select lo-ram
 
 	XOR	A
-	LD	(iobyte), A
-	LD	(cdisk), A
+	LD	(IOBYTE), A
+	LD	(TDRIVE), A
 
 	LD 	a, 0c3h		;c3 is a jmp instruction
 	LD	(0),A		;for jmp to wboot
@@ -49,19 +46,19 @@ _WBOOT_SkipRom:
 	LD	(1),HL		;set address field for jmp at 0
 ;
 	LD	(5),A		;for jmp to bdos
-	LD	HL, bdos	;bdos entry point
+	LD	HL, FBASE	;bdos entry point
 	LD	(6),HL		;address field of Jump at 5 to bdos
 ;
-	;; LD	BC, 80h		;default dma address is 80h
-	;; call	setdma
+	LD	BC, 80h		;default dma address is 80h
+	CALL	SETDMA
 ;
-;; 	ei			;enable the interrupt system
-;; 	LD	A,(cdisk)	;get current disk number
-;; 	cp	disks		;see if valid disk number
-;; 	jp	c,diskok	;disk valid, go to ccp
-;; 	ld	a,0		;invalid disk, change to disk 0
-;; diskok:	LD 	c, a		;send to the ccp
-	
+ 	EI			;enable the interrupt system
+ 	LD	A,(TDRIVE)	;get current disk number
+ 	CP	1		;see if valid disk number
+ 	JP	C, _WBOOT_DiskOk	;disk valid, go to ccp
+ 	LD	A,0		;invalid disk, change to disk 0
+_WBOOT_DiskOk:
+	LD 	C, A		;send to the ccp
 	JP	CBASE		; launch CP/M
 
 ;;; ============================================================================
@@ -102,12 +99,168 @@ _CONOUT:
 	OUT	(UART_THR), A	
 	RET
 
+;;; ============================================================================
+;;; Go to track 0
+;;; ============================================================================
+_HOME:	
+	LD	C, 0
+	CALL	SETTRK
+	RET
 
+;;; ============================================================================
+;;; No sector translation
+;;; ============================================================================	
+_SECTRN:
+	EX	DE, HL
+	ADD	HL, BC
+	RET
+
+;;; ============================================================================
+;;; Select disk, for now we only support A (primary CF)
+;;; ============================================================================	
+_SELDSK:
+	LD	HL, 0x0000	; HL <- 0 indicates error
+	LD	A, C
+	CP	1
+	RET	NC
+	CALL	CF_Init
+	LD	(DISK_SELECTED), A
+	LD	HL, CF_DPH
+	RET
+
+;;; ============================================================================
+;;; Set buffer address for reading from/writing to disk 
+;;; ============================================================================
+_SETDMA:
+	LD	(DISK_DMA), BC
+	RET
+
+;;; ============================================================================
+;;; Set next track to access on disk
+;;; ============================================================================
+_SETTRK:
+	LD	(DISK_TRACK), BC
+	RET
+
+;;; ============================================================================
+;;; Set next sector to access on disk
+;;; ============================================================================
+_SETSEC:
+	LD	(DISK_SECTOR), BC
+	RET
+
+;;; ============================================================================
+;;; Reads a sector from the disk
+;;; ============================================================================
+_READ:
+	PUSH	HL
+	PUSH	DE
+	PUSH	BC
+	LD	HL, CF_SCRATCH	; first load a block
+	LD	DE, (DISK_TRACK)
+	CALL	CF_ReadSector
+	LD	BC, 128		; copy the relevant 128 bytes to the DMA buffer
+	LD	DE, (DISK_DMA)
+	LD	A, (DISK_SECTOR) ; which sector do we want?
+	CP	0
+	JP	Z, _READ_0
+	CP	1
+	JP	Z, _READ_1
+	CP	2
+	JP	Z, _READ_2	; else fall through to 3
+_READ_3:
+	LD	HL, (CF_SCRATCH+(128*3))
+	JP	_READ_DO
+_READ_2:	
+	LD	HL, (CF_SCRATCH+(128*2))
+	JP	_READ_DO
+_READ_1:	
+	LD	HL, (CF_SCRATCH+(128*1))
+	JP	_READ_DO
+_READ_0:	
+	LD	HL, CF_SCRATCH
+_READ_DO:
+	LDIR
+	XOR	A		; done, set A to 0 for success
+	POP	BC
+	POP	DE
+	POP	HL
+	RET
+
+;;; ============================================================================
+;;; Writes a sector to the disk
+;;; ============================================================================
+_WRITE:
+	PUSH	HL
+	PUSH	DE
+	PUSH	BC
+	LD	HL, CF_SCRATCH	; load the block first so we can update only 128b of it
+	LD	DE, (DISK_TRACK)
+	CALL	CF_ReadSector
+	LD	BC, 128		; we're adjusting only one sector
+	LD	HL, (DISK_DMA)
+	LD	A, (DISK_SECTOR) ; which sector do we want?
+	CP	0
+	JP	Z, _WRITE_0
+	CP	1
+	JP	Z, _WRITE_1
+	CP	2
+	JP	Z, _WRITE_2	; else fall through to 3
+_WRITE_3:
+	LD	DE, (CF_SCRATCH+(128*3))
+	JP	_WRITE_DO
+_WRITE_2:	
+	LD	DE, (CF_SCRATCH+(128*2))
+	JP	_WRITE_DO
+_WRITE_1:
+	LD	DE, (CF_SCRATCH+(128*1))
+	JP	_WRITE_DO
+_WRITE_0:
+	LD	DE, CF_SCRATCH
+_WRITE_DO:
+	LDIR			; copy new sector data into buffer
+	LD	DE, (DISK_TRACK) ; write the modified block back to disk
+	LD	HL, CF_SCRATCH
+	CALL	CF_WriteBlock
+	XOR	A		; done, set A to 0 for success
+	POP	BC
+	POP	DE
+	POP	HL
+	RET
+
+
+;;;  CF disk parameter header
 CF_DPH:
-	dw 	0xFFFF		; sectors per track
-	db 	7
-	db	127
+	dw 	0x0000		; no translation table
+	dw	0x0000		; scratch area
+	dw	0x0000
+	dw	0x0000
+	dw 	DIRBF		; sector buffer
+	dw	CF_DPB
+	dw 	0		; no CSV
+;;; dw   CF_CSV
+	dw	CF_ALV
 
+CF_DPB:
+	dw	4		; we are pretending a cf 512b block is a track
+	db 	4		; block shift factor
+	db	15		; block mask
+	db	0		; extent mask
+	dw	4095		; number of blocks on disk - 1
+	dw	511		; number of directory entries - 1
+	db	0xFF		; al0
+	db	0x0		; al1
+	dw	0x0000		; csv size (0 for fixed disk) or num directories / 4 rounded up
+	dw	0x0000		; number of reserved tracks (none for us, we load CP/M from ROM)
+
+;;; variables
+DISK_SELECTED:	db	0x00
+DISK_DMA:	dw	0x0000
+DISK_TRACK:	dw	0x0000
+DISK_SECTOR:	dw	0x0000
+DIRBF:		defs	128
+CF_ALV:		defs	512	; 8 bits per block
+;; CF_CSV:		defs	31	
 ;;; Verify in labels.txt that this symbol is not higher than 0xFE00 
 CF_SCRATCH:	 defs 	512
 	

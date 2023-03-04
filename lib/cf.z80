@@ -23,10 +23,6 @@ CF_WaitReady:
 	RET
 
 CF_FindBlock:
-	SRL	D		; divide by 4 to get the CF 512b block
-	RR 	E
-	SRL 	D
-	RR 	E
 	LD	A, 0xE0		; upper two LBA address bytes are always the same
 	OUT	(CF_LBA3), A
 	XOR	A
@@ -38,8 +34,7 @@ CF_FindBlock:
 	RET
 
 ;;; ============================================================================
-;;; Reads a 512 block containing the given 128 byte sector from a CF card.
-;;; This is useful because CP/M sectors are 128 bytes long.
+;;; Reads a 512 block from a CF card.
 ;;; DE - sector number
 ;;; HL - destination
 ;;; ============================================================================
@@ -63,9 +58,8 @@ CF_ReadSector_Loop:
 	RET
 
 ;;; ============================================================================
-;;; Writes a 512 block containing the given 128 byte sector from a CF card.
-;;; This is useful because CP/M sectors are 128 bytes long.
-;;; DE - sector number
+;;; Writes a 512 block to a CF card.
+;;; DE - block number
 ;;; HL - data to write
 ;;; ============================================================================
 CF_WriteBlock:
