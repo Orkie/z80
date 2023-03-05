@@ -262,5 +262,5 @@ DIRBF:		defs	128
 CF_ALV:		defs	512	; 8 bits per block
 ;; CF_CSV:		defs	31	
 ;;; Verify in labels.txt that this symbol is not higher than 0xFE00 
-CF_SCRATCH:	 defs 	512
+CF_SCRATCH:	 defs 	512 	;TODO we could cache the last track we read/write and hence avoid doing a read again if we already have it in the buffer
 	
