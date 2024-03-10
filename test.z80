@@ -1,7 +1,8 @@
 Main:
     CALL    UART_Init
-    LD	HL, S_InvalidCmd
-	CALL 	UART_WriteString
+    ; LD	HL, S_InvalidCmd
+	; CALL 	UART_WriteString
+    CALL    UART_ReadChar
     JP      Main
 
 S_InvalidCmd:	db	"Unknown command (try HELP)\r\n",0
