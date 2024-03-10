@@ -11,7 +11,7 @@
             "remoteType": "zsim",
             "zsim": {
                 "visualMemory": true,
-                "memoryModel": "ZX48K",
+                "memoryModel": "RAM",
                 "customCode": {
                     "debug": true,
                     "jsPath": "debug/peripherals.js",
