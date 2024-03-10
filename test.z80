@@ -1,0 +1,10 @@
+Main:
+    CALL    UART_Init
+    LD	HL, S_InvalidCmd
+	CALL 	UART_WriteString
+    JP      Main
+
+S_InvalidCmd:	db	"Unknown command (try HELP)\r\n",0
+
+include "lib/hw.z80"
+include "lib/uart.z80"

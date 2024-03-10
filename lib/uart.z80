@@ -4,7 +4,7 @@
 UART_Init:
 	IN 	A, (UART_LCR)	; Enable access to divisor registers
 	SET 	7, A
-	OUT 	(0x03), A	
+	OUT 	(UART_LCR), A	
 
 	LD	A, 0x00		; Set divisor to 12, 9600 baud
 	OUT	(UART_DLM), A

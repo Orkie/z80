@@ -1,0 +1,41 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "dezog",
+            "request": "launch",
+            "name": "Simulator - Z80 homebrew computer",
+            "remoteType": "zsim",
+            "zsim": {
+                "visualMemory": true,
+                "memoryModel": "ZX48K",
+                "customCode": {
+                    "debug": true,
+                    "jsPath": "debug/peripherals.js",
+                    "uiPath": "debug/ui.html"
+                }
+            },
+            "z80asm": [
+                {
+                    "path": "test.list",
+                    "srcDirs": [""]
+                }
+            ],
+            "commandsAfterLaunch": [],
+            "history": {
+                "reverseDebugInstructionCount": 1000000,
+                "spotCount": 10,
+                "codeCoverageEnabled": true
+            },
+            "startAutomatically": false,
+            "rootFolder": "${workspaceFolder}",
+            "loadObjs": [
+                { "path": "test.bin", "start": "0x0" }
+            ],
+            "topOfStack": "0x8400"
+        }
+    ]
+}

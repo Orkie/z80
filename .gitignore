@@ -3,4 +3,6 @@
 \#*\#
 .\#*
 cpm/labels.txt
+.tmp
+**/*.list
 
