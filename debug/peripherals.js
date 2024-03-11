@@ -59,6 +59,8 @@ var CF_LBA0 = 0x00;
 var CF_LBA1 = 0x00;
 const cfBuf = Buffer.alloc(512, 0x00);
 var cfDataCount = 0;
+var cfCurrentCommand = 0x0;
+var cfCurrentSector = 0x0;
 
 // serial input callback
 const serialInputFIFO = [];
@@ -92,20 +94,33 @@ API.writePort = (port, value) => {
             break;
         case PORT_CF_CMD:
             if(fd !== -1) {
-                const sector = (CF_LBA1 << 8) | CF_LBA0;
+                cfCurrentCommand = v;
+                cfCurrentSector = (CF_LBA1 << 8) | CF_LBA0;
                 if(v == CF_CMD_READ_SECTOR) {
-                    API.log(`Read sector ${sector}`);
+                    API.log(`Read sector ${cfCurrentSector}`);
                     try {
-                        fs.readSync(fd, cfBuf, 0, 512, sector*512);
+                        fs.readSync(fd, cfBuf, 0, 512, cfCurrentSector*512);
                         cfDataCount = 0;
                     } catch(e) {
                         API.log(`Error while reading CF image`, e)
                     }
+                } else if(v == CF_CMD_WRITE_SECTOR) {
+                    cfDataCount = 0;
                 } else {
                     API.log(`Unknown CF command: ${v}`);
                 }
             } else {
                 API.log("No CF image open");
+            }
+            break;
+        case PORT_CF_DATA:
+            if(cfCurrentCommand == CF_CMD_WRITE_SECTOR) {
+                cfBuf[cfDataCount++] = v;
+                if(cfDataCount == 512) {
+                    API.log(`Write sector ${cfCurrentSector}`);
+                    cfCurrentCommand = 0x0;
+                    fs.writeSync(fd, cfBuf, 0, 512, sector*512)
+                }
             }
             break;
         default:
@@ -129,7 +144,14 @@ API.readPort = (port) => {
         case PORT_CF_STATUS:
             return 0b00001000;
         case PORT_CF_DATA:
-            return cfBuf[cfDataCount++ % 512];
+            if(cfCurrentCommand == CF_CMD_READ_SECTOR) {
+                const out = cfBuf[cfDataCount++ % 512];
+                if(cfDataCount == 512) {
+                    cfCurrentCommand = 0x0;
+                }
+                return out;
+            }
+            break;
         default:
             API.log(`Reading from unimplemented port: ${p}`);
     }
