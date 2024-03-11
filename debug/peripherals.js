@@ -21,6 +21,20 @@ const pty = {
 const terminal = vscode.window.createTerminal({ name: terminalName, pty, isTransient: true });
 terminal.show();
 
+// virtual CF card
+const fs = API.fs;
+const buffer = API.buffer;
+const Buffer = buffer.Buffer;
+var fd = -1;
+const cfFilename = `${basePath}/nombr.bin`;
+try {
+    fd = fs.openSync(cfFilename, "r+");
+} catch(e) {
+    API.log(`Error while trying to open ${cfFilename}`, e);
+    fd = -1;
+}
+API.log(`Opened ${cfFilename}: ${fd}`);
+
 // Port definitions
 const PORT_UART_THR = 0x00;
 const PORT_UART_RHR = 0x00;
@@ -28,9 +42,23 @@ const PORT_UART_LCR = 0x03;
 const PORT_UART_LSR = 0x05;
 const PORT_UART_SPR = 0x07;
 
+const PORT_CF_DATA = 0x08;
+const PORT_CF_STATUS = 0x0F;
+const PORT_CF_CMD = 0x0F;
+const PORT_CF_LBA0 = 0x0B;
+const PORT_CF_LBA1 = 0x0C;
+
+const CF_CMD_READ_SECTOR = 0x20;
+const CF_CMD_WRITE_SECTOR = 0x30;
+
 var UART_LCR = 0x00;
 var UART_LSR = 0x60;
 var UART_SPR = 0x00;
+
+var CF_LBA0 = 0x00;
+var CF_LBA1 = 0x00;
+const cfBuf = Buffer.alloc(512, 0x00);
+var cfDataCount = 0;
 
 // serial input callback
 const serialInputFIFO = [];
@@ -56,6 +84,30 @@ API.writePort = (port, value) => {
         case PORT_UART_SPR:
             UART_SPR = v;
             break;
+        case PORT_CF_LBA0:
+            CF_LBA0 = v;
+            break;
+        case PORT_CF_LBA1:
+            CF_LBA1 = v;
+            break;
+        case PORT_CF_CMD:
+            if(fd !== -1) {
+                const sector = (CF_LBA1 << 8) | CF_LBA0;
+                if(v == CF_CMD_READ_SECTOR) {
+                    API.log(`Read sector ${sector}`);
+                    try {
+                        fs.readSync(fd, cfBuf, 0, 512, sector*512);
+                        cfDataCount = 0;
+                    } catch(e) {
+                        API.log(`Error while reading CF image`, e)
+                    }
+                } else {
+                    API.log(`Unknown CF command: ${v}`);
+                }
+            } else {
+                API.log("No CF image open");
+            }
+            break;
         default:
             API.log(`Writing to unimplemented port: ${p}`)
     }
@@ -74,6 +126,10 @@ API.readPort = (port) => {
             return v === undefined ? 0x00 : v;
         case PORT_UART_SPR:
             return UART_SPR;
+        case PORT_CF_STATUS:
+            return 0b00001000;
+        case PORT_CF_DATA:
+            return cfBuf[cfDataCount++ % 512];
         default:
             API.log(`Reading from unimplemented port: ${p}`);
     }

@@ -1,11 +1,18 @@
 Main:
-    CALL    UART_Init
+    CALL CF_Init
+	LD	E, 0		; Set sector
+	LD	D, 0
+    CALL CF_ReadSector
+    ; CALL    UART_Init
     ; LD	HL, S_InvalidCmd
 	; CALL 	UART_WriteString
-    CALL    UART_ReadChar
+    ; CALL    UART_ReadChar
     JP      Main
 
 S_InvalidCmd:	db	"Unknown command (try HELP)\r\n",0
 
 include "lib/hw.z80"
 include "lib/uart.z80"
+include "lib/cf.z80"
+
+V_CF:		ds 	512
