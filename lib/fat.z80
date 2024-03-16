@@ -1,0 +1,47 @@
+;;; Very simple FAT16 driver for the CF card
+;;; Limitations:
+;;;    - Only supports FAT16
+;;;    - Presumes 512 bytes per sector
+
+;;; ============================================================================
+;;; Figure out what we need to access FAT filesystem on CF card
+;;; ============================================================================
+FAT_Init:
+    PUSH    DE
+    PUSH    HL
+    LD      DE, 0
+    LD      HL, CF_BUFFER
+    CALL    CF_ReadSector
+    LD      A, (CF_BUFFER+0)
+    CP      0xEB
+    JP      Z, FAT_Init_NoMBR
+    ; TODO - navigate the MBR and load the initial FAT sector
+FAT_Init_NoMBR:
+    LD      HL, 0 ; filesystem starts at sector 0
+FAT_Init_ReadBootSector:
+    LD      A, (CF_BUFFER+0x0D)
+    LD      (FAT_SECTORS_PER_CLUSTER), A
+    ; compute start sector for first FAT
+    LD      HL, (FAT_FS_START_SECTOR)
+    LD      DE, (CF_BUFFER+0x0E)
+    ADD     HL, DE
+    LD      (FAT_FAT1_SECTOR), HL
+    ;; compute start sector for root directory
+    LD      A, (CF_BUFFER+0x10)
+    LD      DE, (CF_BUFFER+0x16)
+FAT_Init_RootDirLoop:
+    ADD     HL, DE
+    DEC     A
+    JP      NZ, FAT_Init_RootDirLoop
+    LD      (FAT_ROOT_DIR_SECTOR), HL
+
+    ; done
+    POP     HL
+    POP     DE
+    RET
+
+CF_BUFFER:		            ds 512
+FAT_SECTORS_PER_CLUSTER:    ds 1
+FAT_ROOT_DIR_SECTOR:        ds 2
+FAT_FAT1_SECTOR:            ds 2
+FAT_FS_START_SECTOR:        ds 2
