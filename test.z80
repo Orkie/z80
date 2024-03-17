@@ -1,6 +1,7 @@
 Main:
-    CALL    CF_Init
-    CALL    FAT_Init
+    LD      E, 0    ; select A:
+    CALL    DRV_SET
+    CALL    F_SFIRST
 EndLoop:
     JP      EndLoop
 
@@ -10,4 +11,4 @@ include "lib/hw.z80"
 include "lib/uart.z80"
 include "lib/cf.z80"
 include "lib/fat.z80"
-
+include "lib/bdos.z80"

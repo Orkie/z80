@@ -2,13 +2,12 @@
 ;;; Limitations:
 ;;;    - Only supports FAT16
 ;;;    - Presumes 512 bytes per sector
+;;;    - Directories cannot extend more than a single cluster
 
 ;;; ============================================================================
 ;;; Figure out what we need to access FAT filesystem on CF card
 ;;; ============================================================================
 FAT_Init:
-    PUSH    DE
-    PUSH    HL
     LD      DE, 0
     LD      HL, CF_BUFFER
     CALL    CF_ReadSector
@@ -20,12 +19,12 @@ FAT_Init_NoMBR:
     LD      HL, 0 ; filesystem starts at sector 0
 FAT_Init_ReadBootSector:
     LD      A, (CF_BUFFER+0x0D)
-    LD      (FAT_SECTORS_PER_CLUSTER), A
+    LD      (FAT_BLK_PER_CLUSTER), A
     ; compute start sector for first FAT
-    LD      HL, (FAT_FS_START_SECTOR)
+    LD      HL, (FAT_FS_START_ADDR)
     LD      DE, (CF_BUFFER+0x0E)
     ADD     HL, DE
-    LD      (FAT_FAT1_SECTOR), HL
+    LD      (FAT_FAT1_SEC), HL
     ;; compute start sector for root directory
     LD      A, (CF_BUFFER+0x10)
     LD      DE, (CF_BUFFER+0x16)
@@ -33,15 +32,42 @@ FAT_Init_RootDirLoop:
     ADD     HL, DE
     DEC     A
     JP      NZ, FAT_Init_RootDirLoop
-    LD      (FAT_ROOT_DIR_SECTOR), HL
-
+    LD      (FAT_FIRST_CLUSTER_BLK), HL
+    LD      HL, 0x0000
+    LD      (FAT_CUR_DIR_CLUSTER), HL
     ; done
-    POP     HL
-    POP     DE
     RET
 
-CF_BUFFER:		            ds 512
-FAT_SECTORS_PER_CLUSTER:    ds 1
-FAT_ROOT_DIR_SECTOR:        ds 2
-FAT_FAT1_SECTOR:            ds 2
-FAT_FS_START_SECTOR:        ds 2
+
+;;; ============================================================================
+;;; Cluster number to CF block
+;;; HL - cluster
+;;; returns HL - block
+;;; ============================================================================
+FAT_ClusterToBlock:
+    LD      BC, (FAT_BLK_PER_CLUSTER)
+    LD      DE, 0x0000
+    EX      DE, HL
+; if DE is 0, finish
+FAT_ClusterToBlock_Loop:
+    LD      A, D
+    OR      E
+    JP      Z, FAT_ClusterToBlock_Done
+FAT_ClusterToBlock_NextCluster:
+    ADD     HL, BC
+    DEC     DE
+    JP      NZ, FAT_ClusterToBlock_Loop
+FAT_ClusterToBlock_Done:
+    LD      DE, (FAT_FIRST_CLUSTER_BLK)
+    ADD     HL, DE
+    RET
+
+;;; ============================================================================
+;;; Variables
+;;; ============================================================================
+CF_BUFFER:              ds 512
+FAT_BLK_PER_CLUSTER:    ds 2, 0
+FAT_FIRST_CLUSTER_BLK:  ds 2 ; block containing the root directory
+FAT_FAT1_SEC:           ds 2 ; block containing the first FAT
+FAT_FS_START_ADDR:      ds 2 ; block containing boot sector (TODO - we need to store this?)
+FAT_CUR_DIR_CLUSTER:    ds 2 ; block containing the curent directory

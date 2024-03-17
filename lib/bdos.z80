@@ -1,0 +1,38 @@
+;;; A broadly CP/M-compatible BDOS, specific to this machine (not portable, no BIOS)
+
+;;; ============================================================================
+;;; Selects and opens drive A: (CF card)
+;;; syscall 0x0E
+;;; E - drive number
+;;; returns A=0x00 on success, or A=0xFF on failure
+;;; ============================================================================
+DRV_SET:
+    LD      A, E
+    OR      0x00  ; cp 0
+    JP      NZ, DRV_SET_FAIL
+    CALL    CF_Init
+    CALL    FAT_Init
+    LD      A, 0x00
+    LD      L, 0x00
+    RET
+DRV_SET_FAIL:
+    LD      A, 0xFF
+    LD      L, 0xFF
+    LD      (SELECTED_DRIVE), A
+    RET
+
+
+;Entered with C=11h, DE=address of FCB. Returns error codes in BA and HL.
+;;; ============================================================================
+;;; Searches for first file matching a given pattern
+;;; syscall 0x0E
+;;; E - drive number
+;;; returns A=0x00 on success, or A=0xFF on failure
+;;; ============================================================================
+F_SFIRST:
+    LD      HL, 0x2
+    CALL    FAT_ClusterToBlock
+    ;; if current dir cluster is 0..
+    RET
+
+SELECTED_DRIVE:    ds 1
