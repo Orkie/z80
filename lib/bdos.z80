@@ -25,17 +25,64 @@ DRV_SET_FAIL:
 ;Entered with C=11h, DE=address of FCB. Returns error codes in BA and HL.
 ;;; ============================================================================
 ;;; Searches for first file matching a given pattern
-;;; syscall 0x0E
-;;; E - drive number
+;;; syscall 0x11
+;;; DE - address of FCB
 ;;; returns A=0x00 on success, or A=0xFF on failure
 ;;; ============================================================================
 F_SFIRST:
+    LD      (LAST_F_SFIRST_FCB), DE
     LD      HL, (FAT_CUR_DIR_CLUSTER)
     CALL    FAT_ClusterToBlock
+    LD      (FAT_LAST_BLK), HL
     EX      DE, HL
     LD      HL, CF_BUFFER
     CALL    CF_ReadSector
+    LD      HL, CF_BUFFER               ; current directory entry address
+    LD      B, 0                        ; block within directory cluster
+    XOR     A
+    LD      (F_SNEXT_BLK), A
+    JP      F_SFIRST_TestEntry
+F_SFIRST_Loop:
+; todo if we're at the final entry in block... we need to either progress to the next block, or jump to notfound if we're at end of block
+    LD      DE, 32                      ; advance by one directory entry
+    ADD     HL, DE
+    LD      A, H                        ; are we now at the end of the block? i.e. 512 - 0x200
+    CP      CF_BUFFER_END>>8
+    JP      NZ, F_SFIRST_TestEntry      ; no
+    LD      A, L
+    CP      CF_BUFFER_END&0xFF
+    JP      NZ, F_SFIRST_TestEntry      ; no
+    INC     B                           ; are we end the end of the cluster?
+    LD      A, (FAT_BLK_PER_CLUSTER)
+    CP      B
+    JP      Z,  F_SFIRST_NotFound
+    LD      DE, (FAT_LAST_BLK)          ; load next block in cluster
+    LD      HL, CF_BUFFER
+    CALL    CF_ReadSector
+    LD      HL, CF_BUFFER
+F_SFIRST_TestEntry:
+    LD      A, (HL)            ; what kind of directory entry is this?
+    CP      0x00                        ; is this end of list?
+    JP      Z, F_SFIRST_NotFound
+    CP      0xE5                        ; is this a deleted file?
+    JP      Z, F_SFIRST_Loop
+    LD      DE, 0x000B
+    EX      DE, HL
+    ADD     HL, DE
+    EX      DE, HL
+    LD      A, (DE)            ; do file attributes indicate this is a volume label?
+    AND     0x08
+    JP      NZ, F_SFIRST_Loop
+
     ; todo - do something with the directory
     RET
+F_SFIRST_NotFound:
+    LD      A, 0xFF
+    RET
 
-SELECTED_DRIVE:    ds 1
+
+FAT_LAST_BLK:       ds 2
+F_SNEXT_BLK:        ds 1
+LAST_F_SFIRST_FCB:  ds 2
+
+SELECTED_DRIVE:     ds 1

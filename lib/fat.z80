@@ -66,6 +66,7 @@ FAT_ClusterToBlock_Done:
 ;;; Variables
 ;;; ============================================================================
 CF_BUFFER:              ds 512
+CF_BUFFER_END:
 FAT_BLK_PER_CLUSTER:    ds 2, 0
 FAT_FIRST_CLUSTER_BLK:  ds 2 ; block containing the root directory
 FAT_FAT1_SEC:           ds 2 ; block containing the first FAT
