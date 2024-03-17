@@ -30,9 +30,12 @@ DRV_SET_FAIL:
 ;;; returns A=0x00 on success, or A=0xFF on failure
 ;;; ============================================================================
 F_SFIRST:
-    LD      HL, 0x2
+    LD      HL, (FAT_CUR_DIR_CLUSTER)
     CALL    FAT_ClusterToBlock
-    ;; if current dir cluster is 0..
+    EX      DE, HL
+    LD      HL, CF_BUFFER
+    CALL    CF_ReadSector
+    ; todo - do something with the directory
     RET
 
 SELECTED_DRIVE:    ds 1
